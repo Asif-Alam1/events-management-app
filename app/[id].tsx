@@ -1,20 +1,34 @@
 import { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native'
+import {
+	View,
+	Text,
+	StyleSheet,
+	ScrollView,
+	Alert,
+	Linking,
+	Platform
+} from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
-import { Button } from 'react-native-paper'
-import MapView, { Marker } from 'react-native-maps'
+import { Button, Card } from 'react-native-paper'
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'
 import { storage, Event, Attendee } from './utils/storage'
 import * as Calendar from 'expo-calendar'
+import * as Location from 'expo-location'
 import { format } from 'date-fns'
 import { AttendeesList } from '@/components/AttendeesList'
 
 export default function EventDetailsScreen() {
 	const { id } = useLocalSearchParams()
-	const [event, setEvent] = useState<Event | null>(null)
+	const [event, setEvent] = useState<any>(null)
 	const [isRSVPed, setIsRSVPed] = useState(false)
+	const [userLocation, setUserLocation] = useState<{
+		latitude: number
+		longitude: number
+	} | null>(null)
 
 	useEffect(() => {
 		loadEvent()
+		getUserLocation()
 	}, [id])
 
 	const loadEvent = async () => {
@@ -23,6 +37,21 @@ export default function EventDetailsScreen() {
 		if (foundEvent) {
 			setEvent(foundEvent)
 			setIsRSVPed(foundEvent.attendees.some(a => a.id === 'current-user'))
+		}
+	}
+
+	const getUserLocation = async () => {
+		try {
+			const { status } = await Location.requestForegroundPermissionsAsync()
+			if (status === 'granted') {
+				const location = await Location.getCurrentPositionAsync({})
+				setUserLocation({
+					latitude: location.coords.latitude,
+					longitude: location.coords.longitude
+				})
+			}
+		} catch (error) {
+			console.error('Error getting location:', error)
 		}
 	}
 
@@ -43,7 +72,9 @@ export default function EventDetailsScreen() {
 
 		const updatedEvent = {
 			...event,
-			attendees: event.attendees.filter(a => a.id !== attendeeId)
+			attendees: event.attendees.filter(
+				(a: { id: string }) => a.id !== attendeeId
+			)
 		}
 
 		await storage.updateEvent(updatedEvent)
@@ -58,7 +89,7 @@ export default function EventDetailsScreen() {
 
 		const updatedEvent = {
 			...event,
-			attendees: event.attendees.map(a =>
+			attendees: event.attendees.map((a: { id: string }) =>
 				a.id === attendeeId ? { ...a, rsvpStatus: status } : a
 			)
 		}
@@ -73,7 +104,7 @@ export default function EventDetailsScreen() {
 		const updatedEvent = { ...event }
 		if (isRSVPed) {
 			updatedEvent.attendees = updatedEvent.attendees.filter(
-				a => a.id !== 'current-user'
+				(a: { id: string }) => a.id !== 'current-user'
 			)
 		} else {
 			updatedEvent.attendees.push({
@@ -119,14 +150,43 @@ export default function EventDetailsScreen() {
 			await Calendar.createEventAsync(defaultCalendar.id, {
 				title: event.title,
 				startDate: eventDate,
-				endDate: new Date(eventDate.getTime() + 2 * 60 * 60 * 1000), // 2 hours duration
-				location: event.location.name
+				endDate: new Date(eventDate.getTime() + 2 * 60 * 60 * 1000),
+				location: event.location.name,
+				notes: `Address: ${event.location.address || event.location.name}`
 			})
 
 			Alert.alert('Success', 'Event added to calendar')
 		} catch (error) {
 			Alert.alert('Error', 'Failed to add event to calendar')
 		}
+	}
+
+	const openInMaps = () => {
+		if (!event) return
+
+		const scheme = Platform.select({
+			ios: 'maps:0,0?q=',
+			android: 'geo:0,0?q='
+		})
+		const latLng = `${event.location.latitude},${event.location.longitude}`
+		const label = encodeURIComponent(event.location.name)
+		const url: any = Platform.select({
+			ios: `${scheme}${label}@${latLng}`,
+			android: `${scheme}${latLng}(${label})`
+		})
+
+		Linking.openURL(url)
+	}
+
+	const getDirections = () => {
+		if (!event) return
+
+		const url: any = Platform.select({
+			ios: `http://maps.apple.com/?daddr=${event.location.latitude},${event.location.longitude}`,
+			android: `https://www.google.com/maps/dir/?api=1&destination=${event.location.latitude},${event.location.longitude}`
+		})
+
+		Linking.openURL(url)
 	}
 
 	const handleDelete = async () => {
@@ -152,29 +212,44 @@ export default function EventDetailsScreen() {
 			</View>
 		)
 	}
+
 	const attendeeStats = {
-		yes: event.attendees.filter(a => a.rsvpStatus === 'yes').length,
-		no: event.attendees.filter(a => a.rsvpStatus === 'no').length,
-		maybe: event.attendees.filter(a => a.rsvpStatus === 'maybe').length
+		yes: event.attendees.filter(
+			(a: { rsvpStatus: string }) => a.rsvpStatus === 'yes'
+		).length,
+		no: event.attendees.filter(
+			(a: { rsvpStatus: string }) => a.rsvpStatus === 'no'
+		).length,
+		maybe: event.attendees.filter(
+			(a: { rsvpStatus: string }) => a.rsvpStatus === 'maybe'
+		).length
 	}
 
 	return (
 		<ScrollView style={styles.container}>
 			<Text style={styles.title}>{event.title}</Text>
 
-			<View style={styles.infoContainer}>
-				<Text style={styles.infoText}>
-					Date: {format(new Date(event.date), 'PPP')}
-				</Text>
-				<Text style={styles.infoText}>Time: {event.time}</Text>
-				<Text style={styles.infoText}>Location: {event.location.name}</Text>
-				<Text style={styles.infoText}>
-					Attendees: {attendeeStats.yes} going · {attendeeStats.maybe} maybe ·{' '}
-					{attendeeStats.no} not going
-				</Text>
-			</View>
+			<Card style={styles.infoContainer}>
+				<Card.Content>
+					<Text style={styles.infoText}>
+						Date: {format(new Date(event.date), 'PPP')}
+					</Text>
+					<Text style={styles.infoText}>Time: {event.time}</Text>
+					<Text style={styles.infoText}>Location: {event.location.name}</Text>
+					{event.location.address && (
+						<Text style={styles.infoText}>
+							Address: {event.location.address}
+						</Text>
+					)}
+					<Text style={styles.infoText}>
+						Attendees: {attendeeStats.yes} going · {attendeeStats.maybe} maybe ·{' '}
+						{attendeeStats.no} not going
+					</Text>
+				</Card.Content>
+			</Card>
 
 			<MapView
+				provider={PROVIDER_GOOGLE}
 				style={styles.map}
 				initialRegion={{
 					latitude: event.location.latitude,
@@ -187,8 +262,34 @@ export default function EventDetailsScreen() {
 						latitude: event.location.latitude,
 						longitude: event.location.longitude
 					}}
+					title={event.location.name}
+					description={event.location.address}
 				/>
+				{userLocation && (
+					<Marker
+						coordinate={userLocation}
+						title='You are here'
+						pinColor='blue'
+					/>
+				)}
 			</MapView>
+
+			<View style={styles.mapButtons}>
+				<Button
+					mode='contained'
+					onPress={openInMaps}
+					style={styles.mapButton}
+					icon='map'>
+					Open in Maps
+				</Button>
+				<Button
+					mode='contained'
+					onPress={getDirections}
+					style={styles.mapButton}
+					icon='directions'>
+					Get Directions
+				</Button>
+			</View>
 
 			<AttendeesList
 				attendees={event.attendees}
@@ -197,25 +298,35 @@ export default function EventDetailsScreen() {
 				onUpdateStatus={handleUpdateStatus}
 			/>
 
-			<Button mode='contained' onPress={handleRSVP} style={styles.button}>
+			<Button
+				mode='contained'
+				onPress={handleRSVP}
+				style={styles.button}
+				icon={isRSVPed ? 'close' : 'check'}>
 				{isRSVPed ? 'Cancel RSVP' : 'RSVP'}
 			</Button>
 
-			<Button mode='contained' onPress={addToCalendar} style={styles.button}>
+			<Button
+				mode='contained'
+				onPress={addToCalendar}
+				style={styles.button}
+				icon='calendar'>
 				Add to Calendar
 			</Button>
 
 			<Button
 				mode='contained'
 				onPress={() => router.push(`/edit/${event.id}`)}
-				style={styles.button}>
+				style={styles.button}
+				icon='pencil'>
 				Edit Event
 			</Button>
 
 			<Button
 				mode='contained'
 				onPress={handleDelete}
-				style={[styles.button, styles.deleteButton]}>
+				style={[styles.button, styles.deleteButton]}
+				icon='delete'>
 				Delete Event
 			</Button>
 		</ScrollView>
@@ -225,7 +336,8 @@ export default function EventDetailsScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		padding: 16
+		padding: 16,
+		backgroundColor: '#f5f5f5'
 	},
 	title: {
 		fontSize: 24,
@@ -233,10 +345,8 @@ const styles = StyleSheet.create({
 		marginBottom: 16
 	},
 	infoContainer: {
-		backgroundColor: 'white',
-		padding: 16,
-		borderRadius: 8,
-		marginBottom: 16
+		marginBottom: 16,
+		elevation: 2
 	},
 	infoText: {
 		fontSize: 16,
@@ -244,9 +354,18 @@ const styles = StyleSheet.create({
 	},
 	map: {
 		width: '100%',
-		height: 200,
+		height: 300,
 		marginBottom: 16,
 		borderRadius: 8
+	},
+	mapButtons: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		marginBottom: 16
+	},
+	mapButton: {
+		flex: 1,
+		marginHorizontal: 4
 	},
 	button: {
 		marginBottom: 12

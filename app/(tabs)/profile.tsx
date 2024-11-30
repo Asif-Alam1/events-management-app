@@ -50,7 +50,7 @@ export default function ProfileScreen() {
 			totalEvents: events.length,
 			upcomingEvents: upcomingEvents.length,
 			eventsRSVPed: eventsRSVPed.length,
-			eventsCreated: events.length, // Assuming all events are created by the user for now
+			eventsCreated: events.length,
 			rsvpStats: rsvpStatuses
 		})
 	}
@@ -112,7 +112,7 @@ export default function ProfileScreen() {
 	)
 }
 
-// ... your existing styles remain the same ...
+
 
 const styles = StyleSheet.create({
 	container: {

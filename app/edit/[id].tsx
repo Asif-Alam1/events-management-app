@@ -54,7 +54,7 @@ export default function EditEventScreen() {
 			date: date.toISOString().split('T')[0],
 			time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
 			location,
-			attendees: [] // We'll keep the existing attendees in the next step
+			attendees: []
 		}
 
 		try {
@@ -104,7 +104,6 @@ export default function EditEventScreen() {
 				onChangeText={setTitle}
 			/>
 
-			{/* Date Selection */}
 			<TouchableOpacity
 				style={styles.dateTimeButton}
 				onPress={() => setShowDatePicker(true)}>
@@ -120,7 +119,6 @@ export default function EditEventScreen() {
 				/>
 			)}
 
-			{/* Time Selection */}
 			<TouchableOpacity
 				style={styles.dateTimeButton}
 				onPress={() => setShowTimePicker(true)}>
