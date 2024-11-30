@@ -7,7 +7,13 @@ export default function ProfileScreen() {
 	const [stats, setStats] = useState({
 		totalEvents: 0,
 		upcomingEvents: 0,
-		eventsRSVPed: 0
+		eventsRSVPed: 0,
+		eventsCreated: 0,
+		rsvpStats: {
+			going: 0,
+			maybe: 0,
+			declined: 0
+		}
 	})
 
 	useEffect(() => {
@@ -16,21 +22,36 @@ export default function ProfileScreen() {
 
 	const loadStats = async () => {
 		const events = await storage.getEvents()
-		const today = new Date()
+		const today: any = new Date()
 
 		const upcomingEvents = events.filter(event => {
-			const eventDate = new Date(event.date)
+			const eventDate: any = new Date(event.date)
 			return eventDate >= today
 		})
 
 		const eventsRSVPed = events.filter(event =>
-			event.attendees.includes('current-user')
+			event.attendees.some(a => a.id === 'current-user')
+		)
+
+		const rsvpStatuses = events.reduce(
+			(acc, event) => {
+				const userRSVP = event.attendees.find(a => a.id === 'current-user')
+				if (userRSVP) {
+					if (userRSVP.rsvpStatus === 'yes') acc.going++
+					else if (userRSVP.rsvpStatus === 'maybe') acc.maybe++
+					else if (userRSVP.rsvpStatus === 'no') acc.declined++
+				}
+				return acc
+			},
+			{ going: 0, maybe: 0, declined: 0 }
 		)
 
 		setStats({
 			totalEvents: events.length,
 			upcomingEvents: upcomingEvents.length,
-			eventsRSVPed: eventsRSVPed.length
+			eventsRSVPed: eventsRSVPed.length,
+			eventsCreated: events.length, // Assuming all events are created by the user for now
+			rsvpStats: rsvpStatuses
 		})
 	}
 
@@ -57,6 +78,23 @@ export default function ProfileScreen() {
 				</View>
 			</View>
 
+			<View style={styles.statsContainer}>
+				<View style={styles.statCard}>
+					<Text style={styles.statNumber}>{stats.rsvpStats.going}</Text>
+					<Text style={styles.statLabel}>Going</Text>
+				</View>
+
+				<View style={styles.statCard}>
+					<Text style={styles.statNumber}>{stats.rsvpStats.maybe}</Text>
+					<Text style={styles.statLabel}>Maybe</Text>
+				</View>
+
+				<View style={styles.statCard}>
+					<Text style={styles.statNumber}>{stats.rsvpStats.declined}</Text>
+					<Text style={styles.statLabel}>Declined</Text>
+				</View>
+			</View>
+
 			<View style={styles.settingsContainer}>
 				<Text style={styles.sectionTitle}>Settings</Text>
 
@@ -73,6 +111,8 @@ export default function ProfileScreen() {
 		</ScrollView>
 	)
 }
+
+// ... your existing styles remain the same ...
 
 const styles = StyleSheet.create({
 	container: {

@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native'
 import { useLocalSearchParams, router } from 'expo-router'
 import { Button } from 'react-native-paper'
 import MapView, { Marker } from 'react-native-maps'
-import { storage, Event } from './utils/storage'
+import { storage, Event, Attendee } from './utils/storage'
 import * as Calendar from 'expo-calendar'
 import { format } from 'date-fns'
+import { AttendeesList } from '@/components/AttendeesList'
 
 export default function EventDetailsScreen() {
 	const { id } = useLocalSearchParams()
@@ -21,8 +22,49 @@ export default function EventDetailsScreen() {
 		const foundEvent = events.find(e => e.id === id)
 		if (foundEvent) {
 			setEvent(foundEvent)
-			setIsRSVPed(foundEvent.attendees.includes('current-user')) // In a real app, use actual user ID
+			setIsRSVPed(foundEvent.attendees.some(a => a.id === 'current-user'))
 		}
+	}
+
+	const handleAddAttendee = async (newAttendee: Attendee) => {
+		if (!event) return
+
+		const updatedEvent = {
+			...event,
+			attendees: [...event.attendees, newAttendee]
+		}
+
+		await storage.updateEvent(updatedEvent)
+		setEvent(updatedEvent)
+	}
+
+	const handleRemoveAttendee = async (attendeeId: string) => {
+		if (!event) return
+
+		const updatedEvent = {
+			...event,
+			attendees: event.attendees.filter(a => a.id !== attendeeId)
+		}
+
+		await storage.updateEvent(updatedEvent)
+		setEvent(updatedEvent)
+	}
+
+	const handleUpdateStatus = async (
+		attendeeId: string,
+		status: 'yes' | 'no' | 'maybe'
+	) => {
+		if (!event) return
+
+		const updatedEvent = {
+			...event,
+			attendees: event.attendees.map(a =>
+				a.id === attendeeId ? { ...a, rsvpStatus: status } : a
+			)
+		}
+
+		await storage.updateEvent(updatedEvent)
+		setEvent(updatedEvent)
 	}
 
 	const handleRSVP = async () => {
@@ -31,10 +73,14 @@ export default function EventDetailsScreen() {
 		const updatedEvent = { ...event }
 		if (isRSVPed) {
 			updatedEvent.attendees = updatedEvent.attendees.filter(
-				a => a !== 'current-user'
+				a => a.id !== 'current-user'
 			)
 		} else {
-			updatedEvent.attendees.push('current-user')
+			updatedEvent.attendees.push({
+				id: 'current-user',
+				name: 'You',
+				rsvpStatus: 'yes'
+			})
 		}
 
 		await storage.updateEvent(updatedEvent)
@@ -106,6 +152,11 @@ export default function EventDetailsScreen() {
 			</View>
 		)
 	}
+	const attendeeStats = {
+		yes: event.attendees.filter(a => a.rsvpStatus === 'yes').length,
+		no: event.attendees.filter(a => a.rsvpStatus === 'no').length,
+		maybe: event.attendees.filter(a => a.rsvpStatus === 'maybe').length
+	}
 
 	return (
 		<ScrollView style={styles.container}>
@@ -117,7 +168,10 @@ export default function EventDetailsScreen() {
 				</Text>
 				<Text style={styles.infoText}>Time: {event.time}</Text>
 				<Text style={styles.infoText}>Location: {event.location.name}</Text>
-				<Text style={styles.infoText}>Attendees: {event.attendees.length}</Text>
+				<Text style={styles.infoText}>
+					Attendees: {attendeeStats.yes} going · {attendeeStats.maybe} maybe ·{' '}
+					{attendeeStats.no} not going
+				</Text>
 			</View>
 
 			<MapView
@@ -135,6 +189,13 @@ export default function EventDetailsScreen() {
 					}}
 				/>
 			</MapView>
+
+			<AttendeesList
+				attendees={event.attendees}
+				onAddAttendee={handleAddAttendee}
+				onRemoveAttendee={handleRemoveAttendee}
+				onUpdateStatus={handleUpdateStatus}
+			/>
 
 			<Button mode='contained' onPress={handleRSVP} style={styles.button}>
 				{isRSVPed ? 'Cancel RSVP' : 'RSVP'}

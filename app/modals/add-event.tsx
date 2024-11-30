@@ -15,6 +15,7 @@ import * as Location from 'expo-location'
 import MapView, { Marker } from 'react-native-maps'
 import { storage, Event } from '../utils/storage'
 import { format } from 'date-fns'
+import { AttendeesList } from '@/components/AttendeesList'
 
 export default function AddEventModal() {
 	const [title, setTitle] = useState('')
@@ -27,6 +28,7 @@ export default function AddEventModal() {
 		latitude: 0,
 		longitude: 0
 	})
+	const [attendees, setAttendees] = useState<any>([])
 
 	const handleCreate = async () => {
 		const newEvent: Event = {
@@ -35,11 +37,27 @@ export default function AddEventModal() {
 			date: date.toISOString().split('T')[0],
 			time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
 			location,
-			attendees: []
+			attendees: attendees
 		}
 
 		await storage.saveEvent(newEvent)
 		router.back()
+	}
+
+	const handleAddAttendee = (newAttendee: any) => {
+		setAttendees([...attendees, newAttendee])
+	}
+
+	const handleRemoveAttendee = (attendeeId: any) => {
+		setAttendees(attendees.filter((a: { id: any }) => a.id !== attendeeId))
+	}
+
+	const handleUpdateStatus = (attendeeId: any, status: any) => {
+		setAttendees(
+			attendees.map((a: { id: any }) =>
+				a.id === attendeeId ? { ...a, rsvpStatus: status } : a
+			)
+		)
 	}
 
 	const onDateChange = (event: any, selectedDate?: Date) => {
@@ -139,10 +157,14 @@ export default function AddEventModal() {
 				Pick Current Location
 			</Button>
 
-			<Button
-				mode='contained'
-				onPress={handleCreate}
-				style={[styles.button, styles.createButton]}>
+			<AttendeesList
+				attendees={attendees}
+				onAddAttendee={handleAddAttendee}
+				onRemoveAttendee={handleRemoveAttendee}
+				onUpdateStatus={handleUpdateStatus}
+			/>
+
+			<Button mode='contained' onPress={handleCreate} style={styles.button}>
 				Create Event
 			</Button>
 		</ScrollView>

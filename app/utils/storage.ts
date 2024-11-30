@@ -2,6 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const EVENTS_KEY = '@events'
 
+export interface Attendee {
+	id: string
+	name: string
+	rsvpStatus: 'yes' | 'no' | 'maybe'
+}
+
 export interface Location {
 	name: string
 	latitude: number
@@ -14,18 +20,10 @@ export interface Event {
 	date: string
 	time: string
 	location: Location
-	attendees: string[]
+	attendees: Attendee[]
 }
 
 export const storage = {
-	clearAllData: async (): Promise<void> => {
-		try {
-			await AsyncStorage.removeItem(EVENTS_KEY)
-		} catch (error) {
-			console.error('Error clearing data:', error)
-		}
-	},
-
 	async getEvents(): Promise<Event[]> {
 		try {
 			const events = await AsyncStorage.getItem(EVENTS_KEY)
@@ -66,6 +64,14 @@ export const storage = {
 			await AsyncStorage.setItem(EVENTS_KEY, JSON.stringify(filtered))
 		} catch (error) {
 			console.error('Error deleting event:', error)
+		}
+	},
+
+	async clearAllData(): Promise<void> {
+		try {
+			await AsyncStorage.removeItem(EVENTS_KEY)
+		} catch (error) {
+			console.error('Error clearing data:', error)
 		}
 	}
 }
