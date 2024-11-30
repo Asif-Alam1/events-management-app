@@ -96,7 +96,7 @@ export default function AddEventModal() {
 				onChangeText={setTitle}
 			/>
 
-			{/* Date Selection */}
+
 			<TouchableOpacity
 				style={styles.dateTimeButton}
 				onPress={() => setShowDatePicker(true)}>
@@ -112,7 +112,7 @@ export default function AddEventModal() {
 				/>
 			)}
 
-			{/* Time Selection */}
+
 			<TouchableOpacity
 				style={styles.dateTimeButton}
 				onPress={() => setShowTimePicker(true)}>
