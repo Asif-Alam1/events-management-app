@@ -16,6 +16,8 @@ import * as Calendar from 'expo-calendar'
 import * as Location from 'expo-location'
 import { format } from 'date-fns'
 import { AttendeesList } from '@/components/AttendeesList'
+import { Callout } from 'react-native-maps'
+import { MaterialIcons } from '@expo/vector-icons'
 
 export default function EventDetailsScreen() {
 	const { id } = useLocalSearchParams()
@@ -256,7 +258,13 @@ export default function EventDetailsScreen() {
 					longitude: event.location.longitude,
 					latitudeDelta: 0.0922,
 					longitudeDelta: 0.0421
-				}}>
+				}}
+				showsUserLocation={true}
+				showsMyLocationButton={true}
+				showsCompass={true}
+				showsTraffic={true}
+				showsBuildings={true}
+				showsIndoors={true}>
 				<Marker
 					coordinate={{
 						latitude: event.location.latitude,
@@ -264,13 +272,29 @@ export default function EventDetailsScreen() {
 					}}
 					title={event.location.name}
 					description={event.location.address}
-				/>
+					pinColor='#FF0000'>
+					<Callout>
+						<View style={styles.callout}>
+							<Text style={styles.calloutTitle}>{event.location.name}</Text>
+							{event.location.address && (
+								<Text style={styles.calloutAddress}>
+									{event.location.address}
+								</Text>
+							)}
+							<Text style={styles.calloutDetails}>
+								{format(new Date(event.date), 'PPP')} at {event.time}
+							</Text>
+						</View>
+					</Callout>
+				</Marker>
+
 				{userLocation && (
 					<Marker
 						coordinate={userLocation}
 						title='You are here'
-						pinColor='blue'
-					/>
+						pinColor='#4285F4'>
+						<MaterialIcons name='my-location' size={24} color='#4285F4' />
+					</Marker>
 				)}
 			</MapView>
 
@@ -372,5 +396,35 @@ const styles = StyleSheet.create({
 	},
 	deleteButton: {
 		backgroundColor: '#dc3545'
+	},
+
+	callout: {
+		padding: 10,
+		maxWidth: 200
+	},
+	calloutTitle: {
+		fontSize: 16,
+		fontWeight: 'bold',
+		marginBottom: 4
+	},
+	calloutAddress: {
+		fontSize: 14,
+		color: '#666',
+		marginBottom: 4
+	},
+	calloutDetails: {
+		fontSize: 14,
+		color: '#444'
+	},
+	searchResults: {
+		maxHeight: 200,
+		backgroundColor: 'white',
+		borderRadius: 8,
+		marginBottom: 16
+	},
+	searchResult: {
+		padding: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: '#eee'
 	}
 })

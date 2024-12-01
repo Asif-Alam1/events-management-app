@@ -9,13 +9,28 @@
 		"userInterfaceStyle": "automatic",
 		"newArchEnabled": true,
 		"ios": {
-			"supportsTablet": true
+			"supportsTablet": true,
+			"bundleIdentifier": "com.yourcompany.eventsmanagementapp",
+			"config": {
+				"googleMapsApiKey": "AIzaSyCe8nbmSQBR9KmZG5AP3yYZeKogvjQbwX4"
+			}
 		},
 		"android": {
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/images/adaptive-icon.png",
 				"backgroundColor": "#ffffff"
-			}
+			},
+			"package": "com.yourcompany.eventsmanagementapp",
+			"config": {
+				"googleMaps": {
+					"apiKey": "AIzaSyCe8nbmSQBR9KmZG5AP3yYZeKogvjQbwX4"
+				}
+			},
+			"permissions": [
+				"INTERNET",
+				"ACCESS_COARSE_LOCATION",
+				"ACCESS_FINE_LOCATION"
+			]
 		},
 		"web": {
 			"bundler": "metro",
