@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native'
 import { Button } from 'react-native-paper'
 import { useEffect, useState } from 'react'
 import { storage, Event } from '../utils/storage'
+import { authStorage } from '../utils/authStorage'
+import { router } from 'expo-router'
 
 export default function ProfileScreen() {
 	const [stats, setStats] = useState({
@@ -100,6 +102,15 @@ export default function ProfileScreen() {
 
 				<Button
 					mode='outlined'
+					style={[styles.button, styles.logoutButton]}
+					onPress={async () => {
+						await authStorage.logout()
+						router.replace('/login')
+					}}>
+					Logout
+				</Button>
+				<Button
+					mode='outlined'
 					style={[styles.button, styles.dangerButton]}
 					onPress={async () => {
 						await storage.clearAllData()
@@ -111,8 +122,6 @@ export default function ProfileScreen() {
 		</ScrollView>
 	)
 }
-
-
 
 const styles = StyleSheet.create({
 	container: {
@@ -179,5 +188,8 @@ const styles = StyleSheet.create({
 	dangerButton: {
 		borderColor: '#dc3545',
 		marginTop: 20
+	},
+	logoutButton: {
+		borderColor: '#2196F3'
 	}
 })
